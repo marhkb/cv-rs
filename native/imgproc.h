@@ -28,6 +28,7 @@ void cv_erode(
 void cv_dilate(
     cv::Mat* mat, cv::Mat* out, cv::Mat* kernel, Point2i anchor, int iterations, int borderType, Scalar borderValue);
 void cv_gaussian_blur(cv::Mat* mat, cv::Mat* out, Size2i ksize, double sigmaX, double sigmaY, int bordertype);
+void cv_find_contours(cv::Mat* image, CVec<CVec<Point2i>> *contours, CVec<CVec<int>> *hierarchy, int mode, int method, Point2i offset);
 void cv_resize(cv::Mat* from, cv::Mat* to, Size2i dsize, double fx, double fy, int interpolation);
 void cv_calc_hist(const cv::Mat* const cimages,
                   int nimages,

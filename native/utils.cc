@@ -42,7 +42,12 @@ void cv_to_ffi(const std::string& source, CDisposableString* dest) {
     dest->value = result;
 }
 
+void cv_to_ffi(const int& source, int *dest){
+    *dest = source;
+}
+
 void ffi_to_cv(const cv::Mat& source, cv::Mat* dest) {
     *dest = source;
 }
+
 #endif

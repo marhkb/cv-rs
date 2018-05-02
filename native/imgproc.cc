@@ -1,4 +1,5 @@
 #include "imgproc.h"
+#include "utils.h"
 
 extern "C" {
 
@@ -61,6 +62,17 @@ void cv_dilate(
 void cv_gaussian_blur(cv::Mat* mat, cv::Mat* out, Size2i ksize, double sigma_x, double sigma_y, int bordertype) {
     cv::Size cv_ksize(ksize.width, ksize.height);
     cv::GaussianBlur(*mat, *out, cv_ksize, sigma_x, sigma_y, bordertype);
+}
+
+
+void cv_find_contours(cv::Mat* image, CVec<CVec<Point2i>> *contours, CVec<CVec<int>> *hierarchy, int mode, int method, Point2i offset) {
+  std::vector<std::vector<cv::Point> > contours_vector;
+  std::vector<cv::Vec4i> hierarchy_vector;
+  cv::Point offset_point(offset.x, offset.y);
+  cv::findContours(*image, contours_vector, hierarchy_vector, mode, method, offset_point );
+
+  cv_to_ffi(contours_vector,contours);
+  cv_to_ffi(hierarchy_vector,hierarchy);
 }
 
 void cv_resize(cv::Mat* from, cv::Mat* to, Size2i dsize, double fx, double fy, int interpolation) {

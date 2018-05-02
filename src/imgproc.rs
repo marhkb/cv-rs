@@ -63,6 +63,14 @@ extern "C" {
         sigma_y: c_double,
         border_type: i32,
     );
+    fn cv_find_contours(
+        image: *const CMat,
+	contours: *mut CVec<CVec<Point2i>>,
+	hierarchy: *mut CVec<CVec<i32>>,
+	mode: i32,
+	method: i32,
+	offset: Point2i
+	);
     fn cv_resize(
         from: *const CMat,
         to: *mut CMat,
@@ -301,6 +309,30 @@ pub enum InterpolationFlag {
     WarpInverseMap = 16,
 }
 
+
+/// Retrieval Modes - mode of the contour retrieval algorithm
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[allow(missing_docs)]
+pub enum RetrievalMode {
+    External  = 0,
+    List      = 1,
+    CComp     = 2,
+    Tree      = 3,
+    FloodFill = 4
+}
+
+/// Contour Approximation modes - the contour approximation algorithm
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[allow(missing_docs)]
+pub enum ContourApproximationMode {
+    None      = 1,
+    Simple    = 2,
+    Tc89L1   = 3,
+    Tc89Kcos = 4
+}
+
 impl Mat {
     /// Draws a simple line.
     pub fn line(&self, pt1: Point2i, pt2: Point2i) {
@@ -462,6 +494,18 @@ impl Mat {
         let m = CMat::new();
         unsafe { cv_gaussian_blur(self.inner, m, dsize, sigma_x, sigma_y, border_type as i32) }
         Mat::from_raw(m)
+    }
+
+
+    /// Find Contours
+    ///
+    pub fn find_contours(&self, mode: RetrievalMode, method: ContourApproximationMode, offset: Point2i) -> (Vec<Vec<Point2i>>, Vec<Vec<i32>>) {
+        let mut contours = CVec::<CVec<Point2i>>::default();
+        let mut hierarchy = CVec::<CVec<i32>>::default();
+        unsafe { cv_find_contours(self.inner, &mut contours, &mut hierarchy, mode as i32, method as i32, offset) }
+	let contours = contours.unpack();
+	let hierarchy = hierarchy.unpack();
+	(contours,hierarchy)
     }
 
     /// Resizes an image.
