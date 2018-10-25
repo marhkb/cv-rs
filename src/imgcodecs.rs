@@ -8,6 +8,7 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use std::path::Path;
 use failure::Error;
+use std::mem;
 
 extern "C" {
     fn cv_imread(input: *const c_char, flags: ImageReadMode) -> *mut CMat;
@@ -15,7 +16,7 @@ extern "C" {
     fn cv_imencode(
         ext: *const c_char,
         inner: *const CMat,
-        flag_ptr: *const ImageWriteMode,
+        flag_ptr: *const i32,
         flag_size: usize,
     ) -> ImencodeResult;
 }
@@ -136,13 +137,15 @@ impl Mat {
     /// Encodes an image; the encoding scheme depends on the extension provided;
     /// additional write flags can be passed in using a vector. If successful,
     /// returns an owned vector of the encoded image.
-    pub fn image_encode(&self, ext: &str, flags: Vec<ImageWriteMode>) -> Result<Vec<u8>, Error> {
+    pub fn image_encode(&self, ext: &str, flags: &EncodeFlags) -> Result<Vec<u8>, Error> {
         let ext = CString::new(ext)?;
-        let r = unsafe { cv_imencode(ext.into_raw(), self.inner, flags.as_ptr(), flags.len()) };
-        if r.status {
-            unsafe { Ok(::std::slice::from_raw_parts(r.buf, r.size).to_vec()) }
-        } else {
-            Err(CvError::UnknownError("Unable to convert this image to bytes".into()).into())
+        unsafe {
+            let r = cv_imencode(ext.into_raw(), self.inner, flags.0.as_ptr(), flags.0.len());
+            if r.status {
+                Ok(::std::slice::from_raw_parts(r.buf, r.size).to_vec())
+            } else {
+                Err(CvError::UnknownError("Unable to convert this image to bytes".into()).into())
+            }
         }
     }
 
@@ -153,4 +156,25 @@ impl Mat {
         let result = unsafe { cv_imread(path, flags) };
         Ok(Mat::from_raw(result))
     }
+}
+
+///
+#[derive(Debug)]
+pub struct EncodeFlags(Vec<i32>);
+
+///
+#[derive(Debug)]
+pub struct EncodeFlagsBuilder(Vec<i32>);
+impl EncodeFlagsBuilder {
+    ///
+    pub fn new() -> Self { EncodeFlagsBuilder(Vec::new()) }
+    ///
+    pub fn with_flag(mut self, flag: ImageWriteMode, val: i32) -> Self {
+        self.0.push(unsafe { mem::transmute(flag) });
+        self.0.push(val);
+        self
+    }
+
+    ///
+    pub fn build(self) -> EncodeFlags { EncodeFlags(self.0) }
 }
