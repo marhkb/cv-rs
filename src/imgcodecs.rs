@@ -164,9 +164,9 @@ impl EncodeFlagsBuilder {
     ///
     pub fn new() -> Self { EncodeFlagsBuilder(Vec::new()) }
     ///
-    pub fn with_flag(mut self, flag: ImageWriteMode, val: i32) -> Self {
+    pub fn with_flag(mut self, flag: ImageWriteMode, val: u32) -> Self {
         self.0.push(unsafe { mem::transmute(flag) });
-        self.0.push(val);
+        self.0.push(val as i32);
         self
     }
 
