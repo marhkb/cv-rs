@@ -395,6 +395,25 @@ impl Mat {
         }
         Mat::from_raw(m)
     }
+
+    /// Turns this mat into a Vec<u8>
+    pub fn into_vec(self) -> Vec<u8> {
+        let v = {
+            let data = self.data();
+            let v = unsafe { Vec::from_raw_parts(data.as_ptr() as *mut u8, data.len(), data.len()) };
+
+            drop(self.cols);
+            drop(self.rows);
+            drop(self.channels);
+            drop(self.depth);
+
+            v
+        };
+
+        mem::forget(self);
+
+        v
+    }
 }
 
 /// Various border types, image boundaries are denoted with `|`.
