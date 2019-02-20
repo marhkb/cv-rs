@@ -11,6 +11,8 @@ use failure::Error;
 
 use ::*;
 use core::*;
+
+#[cfg(feature = "zmw-message")]
 use std::os::raw::c_void;
 
 #[derive(Clone, Copy, Debug)]
@@ -527,15 +529,15 @@ impl From<Mat> for zmq::Message {
     fn from(mut mat: Mat) -> Self {
         mat.drop = false;
         unsafe {
-            let mut msg = zmq_sys::zmq_msg_t::default();
-            zmq_sys::zmq_msg_init_data(
-                msg.as_ptr() as *mut zmq_sys::zmq_msg_t,
+            let mut msg = zmq::zmq_sys::zmq_msg_t::default();
+            zmq::zmq_sys::zmq_msg_init_data(
+                &mut msg,
                 mat.data().as_ptr() as *mut c_void,
                 mat.data().len(),
-                drop_mat as *mut zmq_sys::zmq_free_fn,
+                drop_mat as *mut zmq::zmq_sys::zmq_free_fn,
                 mat.inner as *mut c_void
             );
+            Self::from_raw(msg)
         }
-        Self::from_raw(msg)
     }
 }
