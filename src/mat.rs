@@ -530,7 +530,8 @@ impl From<Mat> for zmq::Message {
                 mat.data().len(),
                 drop_mat as *mut zmq::zmq_sys::zmq_free_fn,
                 mat.inner as *mut c_void
-            )
+            );
+            msg
         };
         mem::forget(mat);
         Self::from_raw(msg)
