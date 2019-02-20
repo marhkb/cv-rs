@@ -102,6 +102,7 @@ pub struct Mat {
     /// Channels of this mat
     pub channels: c_int,
 
+    #[cfg(feature = "zmq-message")]
     drop: bool
 }
 
@@ -130,6 +131,7 @@ impl Mat {
             cols: unsafe { cv_mat_cols(raw) },
             depth: unsafe { cv_mat_depth(raw) },
             channels: unsafe { cv_mat_channels(raw) },
+            #[cfg(feature = "zmq-message")]
             drop: true
         }
     }
@@ -437,12 +439,22 @@ impl BorderType {
     pub const Default: BorderType = BorderType::Reflect101;
 }
 
+#[cfg(feature = "zmq-message")]
 impl Drop for Mat {
     fn drop(&mut self) {
         if self.drop {
             unsafe {
                 cv_mat_drop(self.inner);
             }
+        }
+    }
+}
+
+#[cfg(not(feature = "zmq-message"))]
+impl Drop for Mat {
+    fn drop(&mut self) {
+        unsafe {
+            cv_mat_drop(self.inner);
         }
     }
 }
