@@ -101,9 +101,6 @@ pub struct Mat {
 
     /// Channels of this mat
     pub channels: c_int,
-
-    #[cfg(feature = "zmq-message")]
-    drop: bool
 }
 
 unsafe impl Send for CMat {}
@@ -439,18 +436,6 @@ impl BorderType {
     pub const Default: BorderType = BorderType::Reflect101;
 }
 
-#[cfg(feature = "zmq-message")]
-impl Drop for Mat {
-    fn drop(&mut self) {
-        if self.drop {
-            unsafe {
-                cv_mat_drop(self.inner);
-            }
-        }
-    }
-}
-
-#[cfg(not(feature = "zmq-message"))]
 impl Drop for Mat {
     fn drop(&mut self) {
         unsafe {
@@ -539,8 +524,7 @@ unsafe extern "C" fn drop_mat(_data: *mut c_void, hint: *mut c_void) {
 #[cfg(feature = "zmq-message")]
 impl From<Mat> for zmq::Message {
     fn from(mut mat: Mat) -> Self {
-        mat.drop = false;
-        unsafe {
+        let msg = unsafe {
             let mut msg = zmq::zmq_sys::zmq_msg_t::default();
             zmq::zmq_sys::zmq_msg_init_data(
                 &mut msg,
@@ -548,8 +532,9 @@ impl From<Mat> for zmq::Message {
                 mat.data().len(),
                 drop_mat as *mut zmq::zmq_sys::zmq_free_fn,
                 mat.inner as *mut c_void
-            );
-            Self::from_raw(msg)
-        }
+            )
+        };
+        mem::forget(mat);
+        Self::from_raw(msg)
     }
 }
