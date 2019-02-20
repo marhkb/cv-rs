@@ -1,14 +1,17 @@
 //! Mat
 
-use ::*;
-use core::*;
-use failure::Error;
 use std::ffi::CString;
 use std::mem;
+use std::ops::{BitAnd, BitOr, BitXor, Not};
 use std::os::raw::{c_char, c_double, c_int};
 use std::path::Path;
 use std::slice;
-use std::ops::{BitAnd, BitOr, BitXor, Not};
+
+use failure::Error;
+
+use ::*;
+use core::*;
+use std::os::raw::c_void;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum CMat {}
@@ -26,11 +29,13 @@ extern "C" {
     fn cv_mat_zeros(rows: c_int, cols: c_int, t: c_int) -> *mut CMat;
     fn cv_mat_from_buffer(rows: c_int, cols: c_int, t: c_int, buffer: *const u8) -> *mut CMat;
     fn cv_mat_is_valid(mat: *mut CMat) -> bool;
+    fn cv_mat_is_continuous(mat: *mut CMat) -> bool;
     fn cv_mat_rows(cmat: *const CMat) -> c_int;
     fn cv_mat_cols(cmat: *const CMat) -> c_int;
     fn cv_mat_depth(cmat: *const CMat) -> c_int;
     fn cv_mat_channels(cmat: *const CMat) -> c_int;
     fn cv_mat_data(cmat: *const CMat) -> *const u8;
+    fn cv_mat_capacity(cmat: *const CMat) -> c_int;
     fn cv_mat_total(cmat: *const CMat) -> usize;
     fn cv_mat_step1(cmat: *const CMat, i: c_int) -> usize;
     fn cv_mat_elem_size(cmat: *const CMat) -> usize;
@@ -94,6 +99,8 @@ pub struct Mat {
 
     /// Channels of this mat
     pub channels: c_int,
+
+    drop: bool
 }
 
 unsafe impl Send for CMat {}
@@ -121,6 +128,7 @@ impl Mat {
             cols: unsafe { cv_mat_cols(raw) },
             depth: unsafe { cv_mat_depth(raw) },
             channels: unsafe { cv_mat_channels(raw) },
+            drop: true
         }
     }
 
@@ -214,6 +222,11 @@ impl Mat {
     /// Returns the size of this matrix.
     pub fn size(&self) -> Size2i {
         Size2i::new(self.cols, self.rows)
+    }
+
+    /// Check if the `Mat` is continuous or not.
+    pub fn is_continuous(&self) -> bool {
+        unsafe { cv_mat_is_continuous(self.inner) }
     }
 
     /// Check if the `Mat` is valid or not.
@@ -395,25 +408,6 @@ impl Mat {
         }
         Mat::from_raw(m)
     }
-
-    /// Turns this mat into a Vec<u8>
-    pub fn into_vec(self) -> Vec<u8> {
-        let v = {
-            let data = self.data();
-            let v = unsafe { Vec::from_raw_parts(data.as_ptr() as *mut u8, data.len(), data.len()) };
-
-            drop(self.cols);
-            drop(self.rows);
-            drop(self.channels);
-            drop(self.depth);
-
-            v
-        };
-
-        mem::forget(self);
-
-        v
-    }
 }
 
 /// Various border types, image boundaries are denoted with `|`.
@@ -443,8 +437,10 @@ impl BorderType {
 
 impl Drop for Mat {
     fn drop(&mut self) {
-        unsafe {
-            cv_mat_drop(self.inner);
+        if self.drop {
+            unsafe {
+                cv_mat_drop(self.inner);
+            }
         }
     }
 }
@@ -518,5 +514,28 @@ impl<'a> Not for &'a Mat {
         let m = CMat::new();
         unsafe { cv_mat_bitwise_not(self.inner, m) }
         Mat::from_raw(m)
+    }
+}
+
+#[cfg(feature = "zmq-message")]
+unsafe extern "C" fn drop_mat(_data: *mut c_void, hint: *mut c_void) {
+    cv_mat_drop(hint as *mut CMat);
+}
+
+#[cfg(feature = "zmq-message")]
+impl From<Mat> for zmq::Message {
+    fn from(mut mat: Mat) -> Self {
+        mat.drop = false;
+        unsafe {
+            let mut msg = zmq_sys::zmq_msg_t::default();
+            zmq_sys::zmq_msg_init_data(
+                msg.as_ptr() as *mut zmq_sys::zmq_msg_t,
+                mat.data().as_ptr() as *mut c_void,
+                mat.data().len(),
+                drop_mat as *mut zmq_sys::zmq_free_fn,
+                mat.inner as *mut c_void
+            );
+        }
+        Self::from_raw(msg)
     }
 }

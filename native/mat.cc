@@ -35,6 +35,10 @@ void* cv_mat_eye(int rows, int cols, int type) {
     return result;
 }
 
+bool cv_mat_is_continuous(cv::Mat* mat) {
+    return mat->isContinuous();
+}
+
 bool cv_mat_is_valid(cv::Mat* mat) {
     return mat->data != NULL;
 }
@@ -55,6 +59,10 @@ int cv_mat_cols(const cv::Mat* const mat) {
 
 int cv_mat_rows(const cv::Mat* const mat) {
     return mat->rows;
+}
+
+int cv_mat_capacity(const cv::Mat* const mat) {
+    return mat->dataend - mat->datastart;
 }
 
 int cv_mat_depth(const cv::Mat* const mat) {

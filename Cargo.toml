@@ -13,6 +13,7 @@ description = "This library primarily provides a binding and API for OpenCV 3.x.
 [dependencies]
 bytes = "0.4"
 failure = "0.1"
+zmq = { path = "../rust-zmq", optional = true }
 
 [dev-dependencies]
 getopts = "0"
@@ -25,3 +26,4 @@ gcc = "0"
 cuda = []
 tesseract = []
 nonfree = []
+zmq-message = ["zmq"]
