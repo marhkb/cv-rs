@@ -128,8 +128,6 @@ impl Mat {
             cols: unsafe { cv_mat_cols(raw) },
             depth: unsafe { cv_mat_depth(raw) },
             channels: unsafe { cv_mat_channels(raw) },
-            #[cfg(feature = "zmq-message")]
-            drop: true
         }
     }
 
