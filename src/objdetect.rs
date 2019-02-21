@@ -40,9 +40,7 @@ pub trait ObjectDetect {
 
 /// Cascade classifier class for object detection.
 #[derive(Debug)]
-pub struct CascadeClassifier {
-    inner: *mut CCascadeClassifier,
-}
+pub struct CascadeClassifier(*mut CCascadeClassifier);
 
 impl ObjectDetect for CascadeClassifier {
     fn detect(&self, image: &Mat) -> Vec<(Rect, f64)> {
@@ -55,10 +53,8 @@ impl ObjectDetect for CascadeClassifier {
 
 impl CascadeClassifier {
     /// Creates a cascade classifier, uninitialized. Before use, call load.
-    pub fn new() -> CascadeClassifier {
-        CascadeClassifier {
-            inner: unsafe { cv_cascade_classifier_new() },
-        }
+    pub fn new() -> Self {
+        CascadeClassifier(unsafe { cv_cascade_classifier_new() })
     }
 
     /// Creates a cascade classifier using the model specified.
@@ -72,7 +68,7 @@ impl CascadeClassifier {
     pub fn load<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         if let Some(p) = path.as_ref().to_str() {
             let s = CString::new(p)?;
-            if unsafe { cv_cascade_classifier_load(self.inner, (&s).as_ptr()) } {
+            if unsafe { cv_cascade_classifier_load(self.0, (&s).as_ptr()) } {
                 return Ok(());
             }
         }
@@ -111,8 +107,8 @@ impl CascadeClassifier {
         let mut c_result = CVec::<Rect>::default();
         unsafe {
             cv_cascade_classifier_detect(
-                self.inner,
-                mat.inner,
+                self.0,
+                mat.0,
                 &mut c_result,
                 scale_factor as c_double,
                 min_neighbors,
@@ -128,7 +124,7 @@ impl CascadeClassifier {
 impl Drop for CascadeClassifier {
     fn drop(&mut self) {
         unsafe {
-            cv_cascade_classifier_drop(self.inner);
+            cv_cascade_classifier_drop(self.0);
         }
     }
 }
@@ -139,10 +135,7 @@ pub enum CSvmDetector {}
 
 /// SvmDetector
 #[derive(Debug)]
-pub struct SvmDetector {
-    /// Pointer to the inner data structure
-    pub(crate) inner: *mut CSvmDetector,
-}
+pub struct SvmDetector(pub(crate) *mut CSvmDetector);
 
 extern "C" {
     fn cv_hog_default_people_detector() -> *mut CSvmDetector;
@@ -156,23 +149,19 @@ impl SvmDetector {
     /// The size of the default people detector is 64x128, that mean that the
     /// people you would want to detect have to be atleast 64x128.
     pub fn default_people_detector() -> SvmDetector {
-        SvmDetector {
-            inner: unsafe { cv_hog_default_people_detector() },
-        }
+        SvmDetector(unsafe { cv_hog_default_people_detector() })
     }
 
     /// Returns the Daimler people detector.
     pub fn daimler_people_detector() -> SvmDetector {
-        SvmDetector {
-            inner: unsafe { cv_hog_daimler_people_detector() },
-        }
+        SvmDetector(unsafe { cv_hog_daimler_people_detector() })
     }
 }
 
 impl Drop for SvmDetector {
     fn drop(&mut self) {
         unsafe {
-            cv_hog_detector_drop(self.inner);
+            cv_hog_detector_drop(self.0);
         }
     }
 }
@@ -332,7 +321,7 @@ impl ObjectDetect for HogDescriptor {
         unsafe {
             cv_hog_detect(
                 self.inner,
-                image.inner,
+                image.0,
                 &mut detected,
                 &mut weights,
                 self.params.win_stride,
@@ -360,7 +349,7 @@ impl HogDescriptor {
 
     /// Sets the SVM detector.
     pub fn set_svm_detector(&mut self, detector: SvmDetector) {
-        unsafe { cv_hog_set_svm_detector(self.inner, detector.inner) }
+        unsafe { cv_hog_set_svm_detector(self.inner, detector.0) }
     }
 }
 

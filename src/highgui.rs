@@ -128,7 +128,7 @@ impl Show for Mat {
     fn show(&self, name: &str, delay: c_int) -> Result<(), Error> {
         let s = CString::new(name)?;
         unsafe {
-            cv_imshow((&s).as_ptr(), self.inner);
+            cv_imshow((&s).as_ptr(), self.0);
             cv_wait_key(delay);
         }
         Ok(())

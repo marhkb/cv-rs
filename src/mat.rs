@@ -12,13 +12,12 @@ use failure::Error;
 use ::*;
 use core::*;
 
-#[cfg(feature = "zmw-message")]
-use std::os::raw::c_void;
-
+/// raw Mat
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum CMat {}
+pub enum CMat {}
 
 impl CMat {
+    /// Creates an empty raw Mat
     pub fn new() -> *mut CMat {
         unsafe { cv_mat_new() }
     }
@@ -86,27 +85,29 @@ extern "C" {
 /// It can be used to store real or complex-valued vectors and matrices, grayscale or color images,
 /// voxel volumes, vector fields, point clouds, tensors, histograms
 #[derive(Debug)]
-pub struct Mat {
-    /// Pointer to the actual C/C++ data structure
-    pub(crate) inner: *mut CMat,
-
-    /// Number of columns
-    pub cols: c_int,
-
-    /// Number of rows
-    pub rows: c_int,
-
-    /// Depth of this mat (it should be the type).
-    pub depth: c_int,
-
-    /// Channels of this mat
-    pub channels: c_int,
-}
+pub struct Mat(pub(crate) *mut CMat);
 
 unsafe impl Send for CMat {}
 unsafe impl Send for Mat {}
 
 impl Mat {
+
+    /// Number of columns
+    #[inline]
+    pub fn cols(&self) -> i32 { unsafe { cv_mat_cols(self.0) } }
+
+    /// Number of rows
+    #[inline]
+    pub fn rows(&self) -> i32 { unsafe { cv_mat_rows(self.0) } }
+
+    /// Depth of this mat (it should be the type).
+    #[inline]
+    pub fn depth(&self) -> i32 { unsafe { cv_mat_depth(self.0) } }
+
+    /// Channels of this mat
+    #[inline]
+    pub fn channels(&self) -> i32 { unsafe { cv_mat_channels(self.0) } }
+
     /// Loads `Mat` from file storage
     pub fn from_file_storage<P: AsRef<Path>>(path: P, section: &str) -> Result<Mat, Error> {
         let path = path_to_cstring(path)?;
@@ -121,21 +122,11 @@ impl Mat {
     #[inline]
     /// Creates a `Mat` object from raw `CMat` pointer. This will read the rows
     /// and cols of the image.
-    pub(crate) fn from_raw(raw: *mut CMat) -> Mat {
-        Mat {
-            inner: raw,
-            rows: unsafe { cv_mat_rows(raw) },
-            cols: unsafe { cv_mat_cols(raw) },
-            depth: unsafe { cv_mat_depth(raw) },
-            channels: unsafe { cv_mat_channels(raw) },
-        }
-    }
+    pub fn from_raw(raw: *mut CMat) -> Self { Mat(raw) }
 
     /// Creates an empty `Mat` struct.
-    pub fn new() -> Mat {
-        let m = CMat::new();
-        Mat::from_raw(m)
-    }
+    #[inline]
+    pub fn new() -> Self { Self::from_raw(CMat::new()) }
 
     /// Creates a new `Mat` from buffer. Note that internally opencv function
     /// won't take ownership of the Mat, but when we call `drop`, it will
@@ -181,7 +172,7 @@ impl Mat {
 
     /// Returns the raw data (as a `u8` pointer)
     pub fn data(&self) -> &[u8] {
-        let bytes = unsafe { cv_mat_data(self.inner) };
+        let bytes = unsafe { cv_mat_data(self.0) };
         let len = self.total() * self.elem_size();
         unsafe { slice::from_raw_parts(bytes, len) }
     }
@@ -189,53 +180,41 @@ impl Mat {
     /// Returns the total number of array elements. The method returns the
     /// number of array elements (a number of pixels if the array represents an
     /// image). For example, images with 1920x1080 resolution will return 2073600.
-    pub fn total(&self) -> usize {
-        unsafe { cv_mat_total(self.inner) }
-    }
+    pub fn total(&self) -> usize { unsafe { cv_mat_total(self.0) } }
 
     /// Returns the matrix element size in bytes.
     ///
     /// The method returns the matrix element size in bytes. For example, if the
     /// matrix type is CV_16SC3 , the method returns 3*sizeof(short) or 6.
-    pub fn elem_size(&self) -> usize {
-        unsafe { cv_mat_elem_size(self.inner) }
-    }
+    pub fn elem_size(&self) -> usize { unsafe { cv_mat_elem_size(self.0) } }
 
     /// Returns the size of each matrix element channel in bytes.
     ///
     /// The method returns the matrix element channel size in bytes, that
     /// is, it ignores the number of channels. For example, if the matrix
     /// type is CV_16SC3 , the method returns sizeof(short) or 2.
-    pub fn elem_size1(&self) -> usize {
-        unsafe { cv_mat_elem_size1(self.inner) }
-    }
+    pub fn elem_size1(&self) -> usize { unsafe { cv_mat_elem_size1(self.0) } }
 
     /// Returns a normalized step.
     ///
     /// The method returns a matrix step divided by Mat::elemSize1() . It can be
     /// useful to quickly access an arbitrary matrix element
-    pub fn step1(&self, i: c_int) -> usize {
-        unsafe { cv_mat_step1(self.inner, i) }
-    }
+    pub fn step1(&self, i: c_int) -> usize { unsafe { cv_mat_step1(self.0, i) } }
 
     /// Returns the size of this matrix.
-    pub fn size(&self) -> Size2i {
-        Size2i::new(self.cols, self.rows)
-    }
+    pub fn size(&self) -> Size2i { Size2i::new(self.cols(), self.rows()) }
 
     /// Check if the `Mat` is continuous or not.
     pub fn is_continuous(&self) -> bool {
-        unsafe { cv_mat_is_continuous(self.inner) }
+        unsafe { cv_mat_is_continuous(self.0) }
     }
 
     /// Check if the `Mat` is valid or not.
-    pub fn is_valid(&self) -> bool {
-        unsafe { cv_mat_is_valid(self.inner) }
-    }
+    pub fn is_valid(&self) -> bool { unsafe { cv_mat_is_valid(self.0) } }
 
     /// Return a region of interest from a `Mat` specfied by a `Rect`.
     pub fn roi(&self, rect: Rect) -> Mat {
-        let cmat = unsafe { cv_mat_roi(self.inner, rect) };
+        let cmat = unsafe { cv_mat_roi(self.0, rect) };
         Mat::from_raw(cmat)
     }
 
@@ -246,16 +225,12 @@ impl Mat {
             FlipCode::YAxis => 1,
             FlipCode::XYAxis => -1,
         };
-        unsafe {
-            cv_mat_flip(self.inner, code);
-        }
+        unsafe { cv_mat_flip(self.0, code); }
     }
 
     /// Returns the images type. For supported types, please see
     /// [CvType](enum.CvType).
-    pub fn cv_type(&self) -> CvType {
-        unsafe { cv_mat_type(self.inner) }
-    }
+    pub fn cv_type(&self) -> CvType { unsafe { cv_mat_type(self.0) } }
 
     /// Returns an identity matrix of the specified size and type.
     pub fn eye(rows: i32, cols: i32, cv_type: CvType) -> Mat {
@@ -326,7 +301,7 @@ impl Mat {
     /// CV_8U type.
     pub fn in_range(&self, lowerb: Scalar, upperb: Scalar) -> Mat {
         let m = CMat::new();
-        unsafe { cv_mat_in_range(self.inner, lowerb, upperb, m) }
+        unsafe { cv_mat_in_range(self.0, lowerb, upperb, m) }
         Mat::from_raw(m)
     }
 
@@ -348,12 +323,12 @@ impl Mat {
         let mut max_loc = Point2i::new(0, 0);
         unsafe {
             cv_mat_min_max_loc(
-                self.inner,
+                self.0,
                 &mut min,
                 &mut max,
                 &mut min_loc,
                 &mut max_loc,
-                mask.inner,
+                mask.0,
             )
         }
         (min, max, min_loc, max_loc)
@@ -363,11 +338,11 @@ impl Mat {
     /// `Mat`.
     // The usage (self.depth) here is buggy, it should actually be the type!
     pub fn mix_channels<T: AsRef<[(c_int, c_int)]>>(&self, nsrcs: usize, ndsts: usize, from_to: T) -> Mat {
-        let m = Mat::with_size(self.rows, self.cols, self.depth);
+        let m = Mat::with_size(self.rows(), self.cols(), self.depth());
         let slice = from_to.as_ref();
         let ptr = slice.as_ptr() as *const c_int;
         unsafe {
-            cv_mat_mix_channels(self.inner, nsrcs, m.inner, ndsts, ptr, slice.len());
+            cv_mat_mix_channels(self.0, nsrcs, m.0, ndsts, ptr, slice.len());
         }
         m
     }
@@ -375,13 +350,13 @@ impl Mat {
     /// Normalize the Mat according to the normalization type.
     pub fn normalize(&self, alpha: f64, beta: f64, t: NormType) -> Mat {
         let m = CMat::new();
-        unsafe { cv_mat_normalize(self.inner, m, alpha, beta, t) }
+        unsafe { cv_mat_normalize(self.0, m, alpha, beta, t) }
         Mat::from_raw(m)
     }
 
     /// Counts non-zero array elements.
     pub fn count_non_zero(&self) -> c_int {
-        unsafe { cv_mat_count_non_zero(self.inner) }
+        unsafe { cv_mat_count_non_zero(self.0) }
     }
 
     /// Forms a border around an image.
@@ -403,9 +378,16 @@ impl Mat {
     ) -> Mat {
         let m = CMat::new();
         unsafe {
-            cv_mat_copy_make_border(self.inner, m, top, bottom, left, right, type_ as i32, color);
+            cv_mat_copy_make_border(self.0, m, top, bottom, left, right, type_ as i32, color);
         }
         Mat::from_raw(m)
+    }
+
+    /// Turns this Mat into an raw Mat
+    pub fn into_raw(self) -> *mut CMat {
+        let c_mat = self.0;
+        mem::forget(self);
+        c_mat
     }
 }
 
@@ -437,7 +419,7 @@ impl BorderType {
 impl Drop for Mat {
     fn drop(&mut self) {
         unsafe {
-            cv_mat_drop(self.inner);
+            cv_mat_drop(self.0);
         }
     }
 }
@@ -446,7 +428,7 @@ impl BitAnd for Mat {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_and(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_and(self.0, rhs.0, m) }
         Self::from_raw(m)
     }
 }
@@ -455,7 +437,7 @@ impl<'a> BitAnd for &'a Mat {
     type Output = Mat;
     fn bitand(self, rhs: &'a Mat) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_and(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_and(self.0, rhs.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -464,7 +446,7 @@ impl BitOr for Mat {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_or(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_or(self.0, rhs.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -473,7 +455,7 @@ impl<'a> BitOr for &'a Mat {
     type Output = Mat;
     fn bitor(self, rhs: &'a Mat) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_or(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_or(self.0, rhs.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -482,7 +464,7 @@ impl BitXor for Mat {
     type Output = Self;
     fn bitxor(self, rhs: Self) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_xor(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_xor(self.0, rhs.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -491,7 +473,7 @@ impl<'a> BitXor for &'a Mat {
     type Output = Mat;
     fn bitxor(self, rhs: &'a Mat) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_xor(self.inner, rhs.inner, m) }
+        unsafe { cv_mat_bitwise_xor(self.0, rhs.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -500,7 +482,7 @@ impl Not for Mat {
     type Output = Self;
     fn not(self) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_not(self.inner, m) }
+        unsafe { cv_mat_bitwise_not(self.0, m) }
         Mat::from_raw(m)
     }
 }
@@ -509,31 +491,7 @@ impl<'a> Not for &'a Mat {
     type Output = Mat;
     fn not(self) -> Self::Output {
         let m = CMat::new();
-        unsafe { cv_mat_bitwise_not(self.inner, m) }
+        unsafe { cv_mat_bitwise_not(self.0, m) }
         Mat::from_raw(m)
-    }
-}
-
-#[cfg(feature = "zmq-message")]
-unsafe extern "C" fn drop_mat(_data: *mut c_void, hint: *mut c_void) {
-    cv_mat_drop(hint as *mut CMat);
-}
-
-#[cfg(feature = "zmq-message")]
-impl From<Mat> for zmq::Message {
-    fn from(mut mat: Mat) -> Self {
-        let msg = unsafe {
-            let mut msg = zmq::zmq_sys::zmq_msg_t::default();
-            zmq::zmq_sys::zmq_msg_init_data(
-                &mut msg,
-                mat.data().as_ptr() as *mut c_void,
-                mat.data().len(),
-                drop_mat as *mut zmq::zmq_sys::zmq_free_fn,
-                mat.inner as *mut c_void
-            );
-            msg
-        };
-        mem::forget(mat);
-        Self::from_raw(msg)
     }
 }

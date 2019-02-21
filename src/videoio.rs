@@ -24,9 +24,7 @@ extern "C" {
 
 /// Video capturing from video files, image sequences or cameras.
 #[derive(Debug)]
-pub struct VideoCapture {
-    inner: *mut CVideoCapture,
-}
+pub struct VideoCapture(*mut CVideoCapture);
 
 unsafe impl Send for CVideoCapture {}
 unsafe impl Send for VideoCapture {}
@@ -122,7 +120,7 @@ impl VideoCapture {
     /// camera connected, just pass 0.
     pub fn new(index: c_int) -> Self {
         let cap = unsafe { cv_videocapture_new(index) };
-        VideoCapture { inner: cap }
+        VideoCapture(cap)
     }
 
     /// Creates a capture device with the path of a video file (eg. video.avi).
@@ -131,12 +129,12 @@ impl VideoCapture {
     pub fn from_path(path: &str) -> Self {
         let s = ::std::ffi::CString::new(path).unwrap();
         let cap = unsafe { cv_videocapture_from_file((&s).as_ptr()) };
-        VideoCapture { inner: cap }
+        VideoCapture(cap)
     }
 
     /// Returns true if video capturing has been initialized already.
     pub fn is_open(&self) -> bool {
-        unsafe { cv_videocapture_is_opened(self.inner) }
+        unsafe { cv_videocapture_is_opened(self.0) }
     }
 
     /// Grabs, decodes and returns the next video frame. `read` combines
@@ -148,7 +146,7 @@ impl VideoCapture {
     /// are no more frames in video file), the methods return `None`.
     pub fn read(&self) -> Option<Mat> {
         let inner = CMat::new();
-        let status = unsafe { cv_videocapture_read(self.inner, inner) };
+        let status = unsafe { cv_videocapture_read(self.0, inner) };
         if status {
             Some(Mat::from_raw(inner))
         } else {
@@ -158,12 +156,12 @@ impl VideoCapture {
 
     /// Sets a property in the `VideoCapture`.
     pub fn set(&self, property: CapProp, value: f64) -> bool {
-        unsafe { cv_videocapture_set(self.inner, property, value) }
+        unsafe { cv_videocapture_set(self.0, property, value) }
     }
 
     /// Gets a property in the `VideoCapture`.
     pub fn get(&self, property: CapProp) -> Option<f64> {
-        let ret = unsafe { cv_videocapture_get(self.inner, property) };
+        let ret = unsafe { cv_videocapture_get(self.0, property) };
         if ret != 0.0 {
             Some(ret)
         } else {
@@ -175,7 +173,7 @@ impl VideoCapture {
 impl Drop for VideoCapture {
     fn drop(&mut self) {
         unsafe {
-            cv_videocapture_drop(self.inner);
+            cv_videocapture_drop(self.0);
         }
     }
 }
@@ -192,9 +190,7 @@ enum CvVideoWriter {}
 /// -On Windows FFMPEG or VFW is used;
 /// -On MacOSX QTKit is used.
 #[derive(Debug)]
-pub struct VideoWriter {
-    inner: *mut CvVideoWriter,
-}
+pub struct VideoWriter(*mut CvVideoWriter);
 
 extern "C" {
     fn cv_videowriter_default() -> *mut CvVideoWriter;
@@ -233,10 +229,10 @@ impl VideoWriter {
     /// -is_color – If it is not zero, the encoder will expect and encode color
     ///  frames, otherwise it will work with grayscale frames (the flag is
     ///  currently supported on Windows only).
-    pub fn new(path: &str, fourcc: c_int, fps: f64, frame_size: Size2i, is_color: bool) -> VideoWriter {
+    pub fn new(path: &str, fourcc: c_int, fps: f64, frame_size: Size2i, is_color: bool) -> Self {
         let s = ::std::ffi::CString::new(path).unwrap();
         let writer = unsafe { cv_videowriter_new((&s).as_ptr(), fourcc, fps, frame_size, is_color) };
-        VideoWriter { inner: writer }
+        VideoWriter(writer)
     }
 
     /// `VideoWriter` constructor.
@@ -252,29 +248,29 @@ impl VideoWriter {
     ///  currently supported on Windows only).
     pub fn open(&self, path: &str, fourcc: c_int, fps: f64, frame_size: Size2i, is_color: bool) -> bool {
         let s = ::std::ffi::CString::new(path).unwrap();
-        unsafe { cv_videowriter_open(self.inner, (&s).as_ptr(), fourcc, fps, frame_size, is_color) }
+        unsafe { cv_videowriter_open(self.0, (&s).as_ptr(), fourcc, fps, frame_size, is_color) }
     }
 
     /// Writes the specified image to video file. It must have the same size as
     /// has been specified when opening the video writer.
     pub fn write(&self, mat: &Mat) {
-        unsafe { cv_videowriter_write(self.inner, mat.inner) }
+        unsafe { cv_videowriter_write(self.0, mat.0) }
     }
 
     /// Returns true if video writer has been initialized already.
     pub fn is_open(&self) -> bool {
-        unsafe { cv_videowriter_is_opened(self.inner) }
+        unsafe { cv_videowriter_is_opened(self.0) }
     }
 
     /// Sets a property in the `VideoWriter`.
     /// Note: `VideoWriterProperty::FrameBytes` is read-only.
     pub fn set(&self, property: VideoWriterProperty, value: f64) -> bool {
-        unsafe { cv_videowriter_set(self.inner, property, value) }
+        unsafe { cv_videowriter_set(self.0, property, value) }
     }
 
     /// Gets a property in the `VideoWriter`.
     pub fn get(&self, property: VideoWriterProperty) -> Option<f64> {
-        let ret = unsafe { cv_videowriter_get(self.inner, property) };
+        let ret = unsafe { cv_videowriter_get(self.0, property) };
         if ret != 0.0 {
             Some(ret)
         } else {
@@ -284,18 +280,12 @@ impl VideoWriter {
 }
 
 impl Default for VideoWriter {
-    fn default() -> VideoWriter {
-        VideoWriter {
-            inner: unsafe { cv_videowriter_default() },
-        }
-    }
+    fn default() -> Self { VideoWriter(unsafe { cv_videowriter_default() }) }
 }
 
 impl Drop for VideoWriter {
     fn drop(&mut self) {
-        unsafe {
-            cv_videowriter_drop(self.inner);
-        }
+        unsafe { cv_videowriter_drop(self.0); }
     }
 }
 

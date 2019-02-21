@@ -135,7 +135,7 @@ impl Mat {
         let ext = CString::new(ext)?;
         unsafe {
             let mut result: COption<CVec<u8>> = mem::zeroed();
-            cv_imencode(ext.into_raw(), self.inner, flags.0.as_ptr(), flags.0.len(), &mut result);
+            cv_imencode(ext.into_raw(), self.0, flags.0.as_ptr(), flags.0.len(), &mut result);
             if result.has_value {
                 Ok(result.value.unpack())
             } else {

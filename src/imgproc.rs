@@ -275,9 +275,7 @@ impl Mat {
         linetype: LineType,
         shift: c_int,
     ) {
-        unsafe {
-            cv_line(self.inner, pt1, pt2, color, thickness, linetype, shift);
-        }
+        unsafe { cv_line(self.0, pt1, pt2, color, thickness, linetype, shift); }
     }
 
     /// Draws a simple, thick, or filled up-right rectangle.
@@ -287,7 +285,7 @@ impl Mat {
 
     /// Draws a rectangle with custom color, thickness and linetype.
     pub fn rectangle_custom(&self, rect: Rect, color: Scalar, thickness: c_int, linetype: LineType) {
-        unsafe { cv_rectangle(self.inner, rect, color, thickness, linetype) }
+        unsafe { cv_rectangle(self.0, rect, color, thickness, linetype) }
     }
 
     /// Draw a simple, thick, or filled up-right rectangle.
@@ -326,7 +324,7 @@ impl Mat {
     ) {
         unsafe {
             cv_ellipse(
-                self.inner,
+                self.0,
                 center,
                 axes,
                 angle,
@@ -343,7 +341,7 @@ impl Mat {
     /// Convert an image from one color space to another.
     pub fn cvt_color(&self, code: ColorConversion) -> Mat {
         let m = CMat::new();
-        unsafe { cv_cvt_color(self.inner, m, code) }
+        unsafe { cv_cvt_color(self.0, m, code) }
         Mat::from_raw(m)
     }
 
@@ -351,7 +349,7 @@ impl Mat {
     /// downsampling step of the Gaussian pyramid construction.
     pub fn pyr_down(&self) -> Mat {
         let m = CMat::new();
-        unsafe { cv_pyr_down(self.inner, m) }
+        unsafe { cv_pyr_down(self.0, m) }
         Mat::from_raw(m)
     }
 
@@ -361,7 +359,7 @@ impl Mat {
     /// size.
     pub fn resize_to(&self, dsize: Size2i, interpolation: InterpolationFlag) -> Mat {
         let m = CMat::new();
-        unsafe { cv_resize(self.inner, m, dsize, 0.0, 0.0, interpolation) }
+        unsafe { cv_resize(self.0, m, dsize, 0.0, 0.0, interpolation) }
         Mat::from_raw(m)
     }
 
@@ -371,7 +369,7 @@ impl Mat {
     /// size.
     pub fn resize_by(&self, fx: f64, fy: f64, interpolation: InterpolationFlag) -> Mat {
         let m = CMat::new();
-        unsafe { cv_resize(self.inner, m, Size2i::default(), fx, fy, interpolation) }
+        unsafe { cv_resize(self.0, m, Size2i::default(), fx, fy, interpolation) }
         Mat::from_raw(m)
     }
 
@@ -389,10 +387,10 @@ impl Mat {
         let ranges = Self::matrix_to_vec(ranges);
         unsafe {
             cv_calc_hist(
-                self.inner,
+                self.0,
                 1,
                 channels.as_ptr(),
-                mask.inner,
+                mask.0,
                 m,
                 channels.len() as c_int,
                 hist_size.as_ptr(),
@@ -414,10 +412,10 @@ impl Mat {
         let ranges = Self::matrix_to_vec(ranges);
         unsafe {
             cv_calc_back_project(
-                self.inner,
+                self.0,
                 1,
                 channels.as_ref().as_ptr(),
-                (*hist).inner,
+                (*hist).0,
                 m,
                 ranges.as_ptr(),
             );
@@ -435,7 +433,7 @@ impl Mat {
     /// To compare such histograms or more general sparse configurations of weighted points,
     /// consider using the cv::EMD function.
     pub fn compare_hist(&self, other: &Mat, method: HistogramComparisionMethod) -> Result<f64, String> {
-        let result = CResult::<f64>::from_callback(|r| unsafe { cv_compare_hist(self.inner, other.inner, method, r) });
+        let result = CResult::<f64>::from_callback(|r| unsafe { cv_compare_hist(self.0, other.0, method, r) });
         result.into()
     }
 

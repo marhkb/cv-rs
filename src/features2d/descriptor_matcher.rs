@@ -86,7 +86,7 @@ impl DescriptorMatcher {
 
     /// Adds descriptors to train a CPU or GPU descriptor collection
     pub fn add(&self, descriptors: &Vec<&Mat>) {
-        let descriptors = descriptors.iter().map(|x| x.inner).collect();
+        let descriptors = descriptors.iter().map(|x| x.0).collect();
         let vec_view = CVecView::pack(&descriptors);
         unsafe {
             cv_matcher_add(self.value, &vec_view);
@@ -107,7 +107,7 @@ impl DescriptorMatcher {
     pub fn match_(&self, query_descriptors: &Mat) -> Vec<DMatch> {
         let mut matches = CVec::<DMatch>::default();
         unsafe {
-            cv_matcher_match(self.value, query_descriptors.inner, &mut matches);
+            cv_matcher_match(self.value, query_descriptors.0, &mut matches);
         }
         matches.unpack()
     }
@@ -119,8 +119,8 @@ impl DescriptorMatcher {
         unsafe {
             cv_matcher_match_two(
                 self.value,
-                query_descriptors.inner,
-                train_descriptors.inner,
+                query_descriptors.0,
+                train_descriptors.0,
                 &mut matches,
             );
         }
@@ -133,7 +133,7 @@ impl DescriptorMatcher {
         unsafe {
             cv_matcher_knn_match(
                 self.value,
-                query_descriptors.inner,
+                query_descriptors.0,
                 k as c_int,
                 &mut matches,
             );

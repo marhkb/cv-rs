@@ -19,9 +19,6 @@ extern crate bytes;
 #[macro_use]
 extern crate failure;
 
-#[cfg(feature = "zmq-message")]
-extern crate zmq;
-
 pub mod core;
 pub mod errors;
 pub mod imgproc;

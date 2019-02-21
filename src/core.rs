@@ -166,10 +166,10 @@ impl Rect {
     /// inside the image, then the result should be all within (0, 1).
     pub fn normalize_to_mat(&self, mat: &Mat) -> Rect2f {
         Rect2f {
-            x: (self.x as f32) / (mat.cols as f32),
-            y: (self.y as f32) / (mat.rows as f32),
-            width: (self.width as f32) / (mat.cols as f32),
-            height: (self.height as f32) / (mat.rows as f32),
+            x: (self.x as f32) / (mat.cols() as f32),
+            y: (self.y as f32) / (mat.rows() as f32),
+            width: (self.width as f32) / (mat.cols() as f32),
+            height: (self.height as f32) / (mat.rows() as f32),
         }
     }
 }
@@ -192,10 +192,10 @@ impl Rect2f {
     /// Rect in absolute pixel numbers.
     pub fn normalize_to_mat(&self, mat: &Mat) -> Rect {
         Rect {
-            x: (self.x * mat.cols as f32) as c_int,
-            y: (self.y * mat.rows as f32) as c_int,
-            width: (self.width * mat.cols as f32) as c_int,
-            height: (self.height * mat.rows as f32) as c_int,
+            x: (self.x * mat.cols() as f32) as c_int,
+            y: (self.y * mat.rows() as f32) as c_int,
+            width: (self.width * mat.cols() as f32) as c_int,
+            height: (self.height * mat.rows() as f32) as c_int,
         }
     }
 }

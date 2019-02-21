@@ -108,8 +108,8 @@ impl Feature2D for SURF {
         unsafe {
             cv_surf_detect_and_compute(
                 self.value,
-                image.inner,
-                mask.inner,
+                image.0,
+                mask.0,
                 &mut keypoints,
                 descriptors,
                 false,

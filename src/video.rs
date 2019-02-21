@@ -61,7 +61,7 @@ pub mod tracking {
         /// * `wndw` - initial search window.
         /// * `criteria` - stop criteria for the underlying meanShift.
         pub fn camshift(&self, wndw: Rect, criteria: &TermCriteria) -> RotatedRect {
-            unsafe { cv_camshift(self.inner, wndw, criteria.c_criteria) }
+            unsafe { cv_camshift(self.0, wndw, criteria.c_criteria) }
         }
     }
 }

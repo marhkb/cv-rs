@@ -56,8 +56,8 @@ impl OcrHmmDecoder {
             cv_hmm_new(
                 classifier_filename.as_ptr(),
                 vocabulary.as_ptr(),
-                transition_probabilities_table.inner,
-                emission_probabilities_table.inner,
+                transition_probabilities_table.0,
+                emission_probabilities_table.0,
                 classifier_type,
                 r,
             )

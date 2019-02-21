@@ -66,7 +66,7 @@ impl MSER {
         let mut msers = CVec::<CVec<Point2i>>::default();
         let mut bboxes = CVec::<Rect>::default();
         unsafe {
-            cv_mser_detect_regions(self.value, image.inner, &mut msers, &mut bboxes);
+            cv_mser_detect_regions(self.value, image.0, &mut msers, &mut bboxes);
         }
         let msers = msers.unpack();
         let boxes = bboxes.unpack();

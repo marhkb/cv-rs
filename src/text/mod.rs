@@ -62,7 +62,7 @@ impl<T: OcrImplInterface> Ocr for T {
         unsafe {
             cv_ocr_run(
                 value,
-                image.inner,
+                image.0,
                 &mut output_text,
                 &mut component_rects,
                 &mut component_texts,
