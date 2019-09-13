@@ -154,7 +154,7 @@ impl Mat {
 }
 
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EncodeFlags(Vec<i32>);
 
 ///
