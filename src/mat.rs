@@ -36,7 +36,7 @@ extern "C" {
     fn cv_mat_depth(cmat: *const CMat) -> c_int;
     fn cv_mat_channels(cmat: *const CMat) -> c_int;
     fn cv_mat_data(cmat: *const CMat) -> *const u8;
-    fn cv_mat_capacity(cmat: *const CMat) -> c_int;
+    fn cv_mat_capacity(cmat: *const CMat) -> usize;
     fn cv_mat_total(cmat: *const CMat) -> usize;
     fn cv_mat_step1(cmat: *const CMat, i: c_int) -> usize;
     fn cv_mat_elem_size(cmat: *const CMat) -> usize;
@@ -176,6 +176,9 @@ impl Mat {
         let len = self.total() * self.elem_size();
         unsafe { slice::from_raw_parts(bytes, len) }
     }
+
+    /// Returns the capacity of this mat
+    pub fn capacity(&self) -> usize { unsafe { cv_mat_capacity(self.0) } }
 
     /// Returns the total number of array elements. The method returns the
     /// number of array elements (a number of pixels if the array represents an

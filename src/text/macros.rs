@@ -1,3 +1,4 @@
+///
 #[macro_export]
 macro_rules! path_to_cstring {
     ($x:expr) => (
@@ -11,6 +12,7 @@ macro_rules! path_to_cstring {
     );
 }
 
+///
 #[macro_export]
 macro_rules! string_to_cstring {
     ($x:expr) => (
